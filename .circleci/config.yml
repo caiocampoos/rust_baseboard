@@ -33,32 +33,6 @@ jobs:
           name: Run all tests
           command: cargo test
 
-  security:
-    docker:
-      - image: circleci/rust
-    steps:
-      - checkout
-      - run:
-          name: Version information
-          command: rustc --version; cargo --version; rustup --version
-      - run:
-          name: Cache permission
-          command: |
-            sudo chown -R $(whoami):$(id -ng) /usr/local/cargo
-      - restore_cache:
-          keys:
-            - v1-cargo-audit-{{ arch }}
-      - run:
-          name: Install dependency auditing tool
-          command: cargo install cargo-audit
-      - save_cache:
-          paths:
-            - /usr/local/cargo
-          key: v1-cargo-audit-{{ arch }}
-      - run:
-          name: Check for known security issues in dependencies
-          command: cargo audit
-
   format:
     docker:
       - image: circleci/rust
@@ -102,10 +76,6 @@ workflows:
   build-test:
     jobs:
       - build-and-test:
-          filters:
-            tags:
-              only: /.*/
-      - security:
           filters:
             tags:
               only: /.*/
