@@ -2,7 +2,7 @@ version: 2
 jobs:
   build-and-test:
     docker:
-      - image: circleci/rust
+      - image: cimg/rust:1.69
     environment:
       # Fail the build if there are warnings
       RUSTFLAGS: '-D warnings'
@@ -24,7 +24,7 @@ jobs:
           command: cargo build
       - save_cache:
           paths:
-            - /usr/local/cargo/registry
+            - /home/circleci/.cargo/registry
             - target/debug/.fingerprint
             - target/debug/build
             - target/debug/deps
@@ -33,9 +33,35 @@ jobs:
           name: Run all tests
           command: cargo test
 
+  security:
+    docker:
+      - image: cimg/rust:1.69
+    steps:
+      - checkout
+      - run:
+          name: Version information
+          command: rustc --version; cargo --version; rustup --version
+      - run:
+          name: Cache permission
+          command: |
+            sudo chown -R $(whoami):$(id -ng) /home/circleci/.cargo/bin/cargo
+      - restore_cache:
+          keys:
+            - v1-cargo-audit-{{ arch }}
+      - run:
+          name: Install dependency auditing tool
+          command: cargo install cargo-audit
+      - save_cache:
+          paths:
+            - /home/circleci/.cargo/bin/cargo
+          key: v1-cargo-audit-{{ arch }}
+      - run:
+          name: Check for known security issues in dependencies
+          command: cargo audit
+
   format:
     docker:
-      - image: circleci/rust
+      - image: cimg/rust:1.69
     steps:
       - checkout
       - run:
@@ -50,7 +76,7 @@ jobs:
 
   lint:
     docker:
-      - image: circleci/rust
+      - image: cimg/rust:1.69
     steps:
       - checkout
       - run:
@@ -79,6 +105,10 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - security:
+          filters:
+            tags:
+              only: /.*/
       - format:
           filters:
             tags:
@@ -91,3 +121,4 @@ workflows:
           filters:
             tags:
               only: /.*/
+
